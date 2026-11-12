@@ -1,0 +1,17 @@
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+pytest-of-*/
+data/*.db
+data/*.db-*
+
+# Arquivos/diretórios temporários do pip e do sistema
+*.tmp
+tmp*
+pip-*
+
+# SQLite journals/WAL/SHM gerados em runtime
+*.db-journal
+*.db-wal
+*.db-shm

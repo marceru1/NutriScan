@@ -1,0 +1,10 @@
+# Nunca levar segredo/dados locais pra dentro da imagem
+.env
+data/
+# Só dev
+tests/
+.venv/
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/

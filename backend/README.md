@@ -18,6 +18,8 @@ uvicorn app.main:app --reload     # http://localhost:8000/docs / Swagger
 pytest                            # testes (SQLite em memória)
 ```
 
+> ⚠️ **Banco local antigo (antes de `consumo_diario`/`substituicoes`)?** O `create_all` não adiciona colunas em banco existente: apague `data\nutriscan.db` e rode `python -m app.seed` de novo.
+
 > 💡 **Rede com antivírus interceptando TLS (Kaspersky na máquina de dev):** se o pip falhar com `SSL: CERTIFICATE_VERIFY_FAILED`, os pacotes estão sendo assinados pela CA pessoal do Kaspersky — consulte `certs/kaspersky-ca.pem` (extraída da própria conexão) e use `pip install --cert certs/kaspersky-ca.pem ...` para validar contra ela em vez de desligar a verificação. Muitas vezes o python do venv passa direto (não é interceptado).
 
 ## Status do esqueleto
@@ -85,7 +87,7 @@ fetch(`${API_URL}/produtos/busca?q=${encodeURIComponent(textoOcr)}`, {
 | `GET /produtos` · `GET /catalogo` · `GET /busca` | 200 (`busca` devolve `[]` quando nenhum — caso de negócio, não erro) | 401/403 (X-Api-Key) · 422 faltando `q` |
 | `GET /produtos/{id}` | 200 | 401/403 · 404 |
 | `POST /{id}/imagem` | 201 | 400 vazio · 401/403 · 404 · 413 >10 MB · 415 tipo |
-| `GET /{id}/imagem` | 200 | 401/403 · 404 |
+| `GET /{id}/imagem` | 200 | 404 — **rota pública** (o `<Image>` do RN não manda header; foto de embalagem não é dado sensível; upload continua com as 2 chaves) |
 | `DELETE /{id}` | 204 | 401/403 · 404 |
 | qualquer | — | 429 estourou rate limit · 500 interno |
 
@@ -111,6 +113,7 @@ Hospedar o **banco regional de produtos** (curado manualmente pela equipe) e res
 | `tabela_nutricional` | Valores por 100 g/ml e por porção (JSON) |
 | `classificacao_rdc` | Alto em açúcar adicionado? sódio? gordura saturada? (RDC 429/2020) |
 | `traducao_n1` / `n2` / `n3` | Tradução redigida: destaque (5–10 palavras) → resumo (20–40) → detalhe (60–90) |
+| `consumo_diario` / `substituicoes` | Conteúdo extra da curadoria (opcional) — aparece em "Detalhes" no app quando preenchidos |
 
 ## Regras de matching (acordadas)
 

@@ -4,7 +4,13 @@
  * Se a equipe preferir React Navigation, cada tela em src/screens já é independente.
  */
 import { useCallback, useEffect, useState } from 'react';
-import { BackHandler, StatusBar, StyleSheet, View } from 'react-native';
+import {
+  Alert,
+  BackHandler,
+  StatusBar,
+  StyleSheet,
+  View,
+} from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { Header } from './src/components/Header';
 import { TabBar, type Aba } from './src/components/TabBar';
@@ -14,6 +20,7 @@ import { Resumo } from './src/screens/Resumo';
 import { Scanner } from './src/screens/Scanner';
 import { Splash } from './src/screens/Splash';
 import { colors } from './src/theme';
+import { ErroApi, obterProduto } from './src/services/api';
 import type { ProdutoCompleto, Rota } from './src/types';
 
 export default function App() {
@@ -36,6 +43,24 @@ export default function App() {
     [],
   );
 
+  // Home/Lista têm só o resumo do catálogo — a ficha completa vem de GET /{id}.
+  const abrirId = useCallback(
+    async (id: number) => {
+      try {
+        ir({ nome: 'resumo', produto: await obterProduto(id) });
+      } catch (e) {
+        Alert.alert('NutriScan', e instanceof ErroApi ? e.message : 'Não foi possível carregar o produto.');
+      }
+    },
+    [ir],
+  );
+
+  // O Scanner já carrega a ficha inteira antes de navegar.
+  const abrir = useCallback(
+    (produto: ProdutoCompleto) => ir({ nome: 'resumo', produto }),
+    [ir],
+  );
+
   // Botão "voltar" do Android: desempilha; na raiz deixa o sistema sair do app.
   useEffect(() => {
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
@@ -55,8 +80,6 @@ export default function App() {
     },
     [],
   );
-  const abrir = useCallback((produto: ProdutoCompleto) => ir({ nome: 'resumo', produto }), [ir]);
-
   if (splash) {
     return <Splash />;
   }
@@ -73,7 +96,8 @@ export default function App() {
 
   return (
     <SafeAreaProvider>
-      <StatusBar barStyle={escuro ? 'light-content' : 'dark-content'} backgroundColor={escuro ? colors.black : colors.bg} />
+      {/* RN 0.88 (edge-to-edge): StatusBar não aceita mais backgroundColor — o fondo é o da raiz */}
+      <StatusBar barStyle={escuro ? 'light-content' : 'dark-content'} />
       <SafeAreaView style={[s.raiz, escuro && { backgroundColor: colors.black }]} edges={['top']}>
         {rota.nome !== 'home' && (
           <Header titulo={titulo} escuro={escuro} onVoltar={pilha.length > 1 ? voltar : undefined} />
@@ -84,12 +108,12 @@ export default function App() {
               historico={historico}
               onBuscar={buscar}
               onEscanear={() => trocarAba('escanear')}
-              onAbrir={abrir}
+              onAbrir={abrirId}
               onVerMais={() => ir({ nome: 'lista' })}
             />
           )}
           {rota.nome === 'lista' && (
-            <Lista key={rota.consulta ?? ''} consultaInicial={rota.consulta} historico={historico} onBuscar={buscar} onAbrir={abrir} />
+            <Lista key={rota.consulta ?? ''} consultaInicial={rota.consulta} historico={historico} onBuscar={buscar} onAbrir={abrirId} />
           )}
           {rota.nome === 'scanner' && <Scanner ativa onProduto={abrir} />}
           {rota.nome === 'resumo' && <Resumo produto={rota.produto} />}

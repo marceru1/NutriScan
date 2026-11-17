@@ -33,6 +33,8 @@ def criar_produto(session: Session, dados: ProdutoCreate) -> Produto:
         traducao_n1=dados.traducao_n1,
         traducao_n2=dados.traducao_n2,
         traducao_n3=dados.traducao_n3,
+        consumo_diario=dados.consumo_diario,
+        substituicoes=dados.substituicoes,
     )
     session.add(produto)
     session.flush()  # garante produto.id antes dos aliases
@@ -90,4 +92,6 @@ def para_completo(produto: Produto) -> dict:
         "traducao_n1": produto.traducao_n1,
         "traducao_n2": produto.traducao_n2,
         "traducao_n3": produto.traducao_n3,
+        "consumo_diario": produto.consumo_diario,
+        "substituicoes": produto.substituicoes,
     }

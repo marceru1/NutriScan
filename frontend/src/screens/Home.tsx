@@ -3,25 +3,25 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from
 import { ProdutoRow } from '../components/ProdutoRow';
 import { SearchBar } from '../components/SearchBar';
 import { Camera } from '../components/Icons';
-import { listarProdutos } from '../services/api';
+import { listarCatalogo } from '../services/api';
 import { colors, radius } from '../theme';
-import type { ProdutoCompleto } from '../types';
+import type { ProdutoLista } from '../types';
 
 interface Props {
   historico: string[];
   onBuscar: (q: string) => void;
   onEscanear: () => void;
-  onAbrir: (p: ProdutoCompleto) => void;
+  onAbrir: (id: number) => void;
   onVerMais: () => void;
 }
 
 export function Home({ historico, onBuscar, onEscanear, onAbrir, onVerMais }: Props) {
   const [q, setQ] = useState('');
-  const [itens, setItens] = useState<ProdutoCompleto[] | null>(null);
+  const [itens, setItens] = useState<ProdutoLista[] | null>(null);
   const [erro, setErro] = useState(false);
 
   useEffect(() => {
-    listarProdutos()
+    listarCatalogo()
       .then(setItens)
       .catch(() => setErro(true));
   }, []);
@@ -46,7 +46,7 @@ export function Home({ historico, onBuscar, onEscanear, onAbrir, onVerMais }: Pr
         {itens === null && !erro && <ActivityIndicator color={colors.primary} style={{ margin: 24 }} />}
         {erro && <Text style={s.erro}>Não foi possível carregar os produtos. Verifique a conexão.</Text>}
         {itens?.slice(0, 5).map(p => (
-          <ProdutoRow key={p.id} produto={p} onPress={() => onAbrir(p)} />
+          <ProdutoRow key={p.id} produto={p} onPress={() => onAbrir(p.id)} />
         ))}
         {itens && itens.length > 5 && (
           <Pressable onPress={onVerMais} style={s.verMais} accessibilityRole="button">

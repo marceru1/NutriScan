@@ -1,4 +1,4 @@
-# NutriScan — Contrato da API v0.2
+# NutriScan — Contrato da API v0.3
 
 > Contrato de consumo para o app React Native e para a equipe de cadastro.
 > Fonte automática (sempre atualizada): **Swagger em `/docs`** quando o backend estiver rodando.
@@ -24,7 +24,7 @@ Sem prefixo de versão no MVP (`/produtos`, não `/api/v1/produtos`). Cada respo
 | 3 | `/produtos/catalogo` | `GET` | Catálogo completo em texto (pré-download para matching offline) | `X-Api-Key` |
 | 4 | `/produtos` | `GET` | Lista resumida do banco | `X-Api-Key` |
 | 5 | `/produtos/{id}` | `GET` | Ficha completa do produto | `X-Api-Key` |
-| 6 | `/produtos/{id}/imagem` | `GET` | Foto da face cadastrada (confirmação visual) | `X-Api-Key` |
+| 6 | `/produtos/{id}/imagem` | `GET` | Foto da face cadastrada (confirmação visual) | **Nenhum** (pública — rate limit) |
 | 7 | `/produtos` | `POST` | Cadastrar produto | `X-Api-Key` **+** `X-Admin-Token` |
 | 8 | `/produtos/{id}/imagem` | `POST` | Cadastrar foto da face (multipart) | `X-Api-Key` **+** `X-Admin-Token` |
 | 9 | `/produtos/{id}` | `DELETE` | Apagar produto | `X-Api-Key` **+** `X-Admin-Token` |
@@ -48,6 +48,7 @@ Sem prefixo de versão no MVP (`/produtos`, não `/api/v1/produtos`). Cada respo
 | **Admin token** | `X-Admin-Token` nas rotas de **escrita** | **Equipe** (curl/Postman) | `NUTRISCAN_ADMIN_TOKEN` — só no backend, **nunca no app** |
 
 - No ambiente dev **sem as vars configuradas** (`.env` em branco), a API fica aberta — modo dev. Na Render, configurar ambas é obrigatório.
+- `GET /produtos/{id}/imagem` é a única rota de `/produtos` **sem chave** — o componente `<Image>` do RN não manda header, e a foto é embalagem registrada (dado não sensível); a proteção real é o rate limit + nosniff. O upload dessa foto continua exigindo as duas chaves.
 - O valor das chaves: gerar com `python -c "import secrets; print(secrets.token_urlsafe(32))"` e colocar em `backend/.env` (copie de `.env.example`). Env do shell/Render sobrescreve o `.env`.
 - `/health`, `/docs` e `/openapi.json` **não** exigem chaves.
 
@@ -141,6 +142,8 @@ Catálogo completo em **texto** (cabe em poucos MB) para o app pré-baixar e faz
       "traducao_n1": "Leite comum: sem lupa crítica na frente.",
       "traducao_n2": "Leite integral tradicional. Não traz lupas de atenção da ANVISA.",
       "traducao_n3": "O leite integral tem gordura e açúcar naturalmente (lactose), mas em níveis que não acionam os selos frontais da RDC 429/2020. Faz parte da alimentação habitual, sem sinal de alerta na embalagem.",
+      "consumo_diario": null,
+      "substituicoes": null,
       "tem_imagem": false
     }
   ]
@@ -150,6 +153,7 @@ Catálogo completo em **texto** (cabe em poucos MB) para o app pré-baixar e faz
 - `gerado_em` (ISO-8601): o app compara contra seu cache para saber se resincroniza.
 - `classificacao_rdc`: convenção adotada — `acucar_adicionado`, `sodio`, `gordura_saturada` (bool). É o que alimenta os **alertas visuais F04**.
 - `traducao_n1`/`n2`/`n3`: os 3 níveis do RNF03 — destaque (5–10 palavras), resumo (20–40), detalhe (60–90).
+- `consumo_diario`/`substituicoes`: conteúdo extra escrito pela curadoria (orientação de consumo e trocas saudáveis) — `null` quando não cadastrado; o app esconde a seção em "Detalhes".
 - `tem_imagem`: só chame `GET /{id}/imagem` quando `true` (evita 404 à toa).
 
 | Código | Quando |
@@ -183,12 +187,15 @@ Lista resumida (`[{id, nome, marca, imagem_path}]`), ordenada por id. Query para
   "classificacao_rdc": {"acucar_adicionado": false, "sodio": false, "gordura_saturada": false},
   "traducao_n1": "Leite comum: sem lupa crítica na frente.",
   "traducao_n2": "Leite integral tradicional. Não traz lupas de atenção da ANVISA.",
-  "traducao_n3": "O leite integral tem gordura e açúcar naturalmente (lactose), mas em níveis que não acionam os selos frontais da RDC 429/2020. Faz parte da alimentação habitual, sem sinal de alerta na embalagem."
+  "traducao_n3": "O leite integral tem gordura e açúcar naturalmente (lactose), mas em níveis que não acionam os selos frontais da RDC 429/2020. Faz parte da alimentação habitual, sem sinal de alerta na embalagem.",
+  "consumo_diario": null,
+  "substituicoes": null
 }
 ```
 
 - `tabela_nutricional` — convenção: `por_100ml` **ou** `por_100g` com `kcal`, `acucar_adicionado_g`, `gordura_saturada_g`, `sodio_mg`. **Vem 100% do cadastro — a API nunca infere valores** (a tabela NÃO vem da câmera).
 - `imagem_path`: caminho interno do servidor; baixe a foto por `GET /{id}/imagem`.
+- `consumo_diario`/`substituicoes`: conteúdo extra da curadoria; `null` → o app omite as seções ("Consumo diário recomendado" / "Substituições saudáveis").
 
 | Código | Quando |
 | :--- | :--- |
@@ -198,7 +205,7 @@ Lista resumida (`[{id, nome, marca, imagem_path}]`), ordenada por id. Query para
 
 ### 4.6 `GET /produtos/{id}/imagem` — foto da face
 
-Foto da face principal cadastrada (**confirmação visual, nunca identificador** — regra de produto: *texto identifica, foto confirma*).
+Foto da face principal cadastrada (**confirmação visual, nunca identificador** — regra de produto: *texto identifica, foto confirma*). **Rota pública** (sem `X-Api-Key`): o `<Image>` do RN não manda header; upload continua com as duas chaves.
 
 **Resposta 200:** bytes da imagem com `Content-Type` correspondente (`image/jpeg` | `image/png` | `image/webp`). Esperado WebP ~1024 px (50–150 KB) — o app baixa por produto lido **e faz cache local**. Só chame se `tem_imagem: true` (catálogo) ou `imagem_path` presente.
 
@@ -221,11 +228,13 @@ Foto da face principal cadastrada (**confirmação visual, nunca identificador**
   "classificacao_rdc": {"acucar_adicionado": false, "sodio": false, "gordura_saturada": false},
   "traducao_n1": "Leite comum: sem lupa crítica na frente.",
   "traducao_n2": "Leite integral tradicional. Não traz lupas de atenção da ANVISA.",
-  "traducao_n3": "O leite integral tem gordura e açúcar naturalmente (lactose), mas em níveis que não acionam os selos frontais da RDC 429/2020. Faz parte da alimentação habitual, sem sinal de alerta na embalagem."
+  "traducao_n3": "O leite integral tem gordura e açúcar naturalmente (lactose), mas em níveis que não acionam os selos frontais da RDC 429/2020. Faz parte da alimentação habitual, sem sinal de alerta na embalagem.",
+  "consumo_diario": "1 copo por dia (opcional — conteúdo extra da curadoria)",
+  "substituicoes": "Prefira bebidas vegetais fortificadas (opcional — conteúdo extra)"
 }
 ```
 
-- `nome` (obrigatório); demais opcionais com padrão (`marca=""`, listas/dicts vazios).
+- `nome` (obrigatório); demais opcionais com padrão (`marca=""`, listas/dicts vazios, extras `null`).
 - `aliases` — textos alternativos impressos na embalagem (abreviações, ordem trocada); **quanto mais, melhor o matching**. A ordem de resposta dos aliases segue a ordem de cadastro.
 - **Nunca inferir valores nutricionais** — só o que está escrito no rótulo real do produto.
 
@@ -323,5 +332,6 @@ Remove o produto + aliases + indexação. Sem corpo de resposta.
 
 | Versão | Mudança |
 | :--- | :--- |
+| 0.3 | `consumo_diario`/`substituicoes` opcionais (POST, ficha e catálogo); `GET /{id}/imagem` pública (o `<Image>` do RN não manda header) |
 | 0.2 | `X-Api-Key` + `X-Admin-Token`; `/catalogo`; upload/serviço de imagem; rate limit; `413`/`415` |
 | 0.1 | `/busca` (FTS5 forte/duvidoso/nenhum), CRUD básico |

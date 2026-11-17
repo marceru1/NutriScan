@@ -16,6 +16,9 @@ class ProdutoCreate(BaseModel):
     traducao_n1: str = ""
     traducao_n2: str = ""
     traducao_n3: str = ""
+    # Conteúdo extra da curadoria, exibido em "Detalhes" no app (null → tela não mostra)
+    consumo_diario: str | None = None
+    substituicoes: str | None = None
 
 
 class ProdutoResumo(BaseModel):
@@ -34,6 +37,8 @@ class ProdutoCompleto(ProdutoResumo):
     traducao_n1: str
     traducao_n2: str
     traducao_n3: str
+    consumo_diario: str | None = None
+    substituicoes: str | None = None
 
 
 class BuscaOut(BaseModel):
@@ -60,6 +65,8 @@ class CatalogoProduto(BaseModel):
     traducao_n1: str
     traducao_n2: str
     traducao_n3: str
+    consumo_diario: str | None = None
+    substituicoes: str | None = None
     # App só tenta baixar a foto se existe — evita 404 por produto
     tem_imagem: bool
 

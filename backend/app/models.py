@@ -26,6 +26,9 @@ class Produto(Base):
     traducao_n1: Mapped[str] = mapped_column(String, default="")
     traducao_n2: Mapped[str] = mapped_column(String, default="")
     traducao_n3: Mapped[str] = mapped_column(String, default="")
+    # Conteúdo extra da curadoria, exibido em "Detalhes" no app (None → tela não mostra)
+    consumo_diario: Mapped[str | None] = mapped_column(String, default=None)
+    substituicoes: Mapped[str | None] = mapped_column(String, default=None)
 
     aliases: Mapped[list["ProdutoAlias"]] = relationship(
         back_populates="produto",

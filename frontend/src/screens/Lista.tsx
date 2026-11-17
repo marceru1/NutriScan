@@ -3,24 +3,24 @@ import { ActivityIndicator, FlatList, StyleSheet, Text, View } from 'react-nativ
 import { ProdutoRow } from '../components/ProdutoRow';
 import { SearchBar } from '../components/SearchBar';
 import { normalizar } from '../domain/rdc';
-import { listarProdutos } from '../services/api';
+import { listarCatalogo } from '../services/api';
 import { colors } from '../theme';
-import type { ProdutoCompleto } from '../types';
+import type { ProdutoLista } from '../types';
 
 interface Props {
   consultaInicial?: string;
   historico: string[];
   onBuscar: (q: string) => void;
-  onAbrir: (p: ProdutoCompleto) => void;
+  onAbrir: (id: number) => void;
 }
 
 export function Lista({ consultaInicial = '', historico, onBuscar, onAbrir }: Props) {
   const [q, setQ] = useState(consultaInicial);
-  const [itens, setItens] = useState<ProdutoCompleto[] | null>(null);
+  const [itens, setItens] = useState<ProdutoLista[] | null>(null);
   const [erro, setErro] = useState(false);
 
   useEffect(() => {
-    listarProdutos()
+    listarCatalogo()
       .then(setItens)
       .catch(() => setErro(true));
   }, []);
@@ -45,9 +45,9 @@ export function Lista({ consultaInicial = '', historico, onBuscar, onAbrir }: Pr
         keyExtractor={p => String(p.id)}
         contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 24 }}
         keyboardShouldPersistTaps="handled"
-        renderItem={({ item }) => <ProdutoRow produto={item} onPress={() => onAbrir(item)} />}
+        renderItem={({ item }) => <ProdutoRow produto={item} onPress={() => onAbrir(item.id)} />}
         ListEmptyComponent={
-          itens ? <Text style={s.msg}>Nenhum produto cadastrado com esse nome.</Text> : null
+          itens ? <Text style={s.msg}>Nenhum produto cadastrado com esse nome.</Text> : undefined
         }
       />
     </View>

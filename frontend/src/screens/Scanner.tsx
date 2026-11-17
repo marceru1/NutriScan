@@ -22,7 +22,7 @@ import {
   type ScanRegion,
   type Text as OcrText,
 } from 'react-native-vision-camera-ocr-plus';
-import { buscarPorTexto, obterProduto } from '../services/api';
+import { buscarPorTexto, obterProduto, ErroApi } from '../services/api';
 import { colors, radius } from '../theme';
 import type { ProdutoCompleto, ProdutoResumo } from '../types';
 
@@ -94,8 +94,8 @@ export function Scanner({ ativa, onProduto }: Props) {
       } else {
         setAviso('Produto ainda não cadastrado.');
       }
-    } catch {
-      setAviso('Sem conexão com o servidor. Tente novamente.');
+    } catch (e) {
+      setAviso(e instanceof ErroApi ? e.message : 'Sem conexão com o servidor. Tente novamente.');
     } finally {
       setOcupado(false);
     }

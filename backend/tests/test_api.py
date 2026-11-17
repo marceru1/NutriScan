@@ -55,6 +55,30 @@ def test_get_inexistente_404(client):
     assert client.get("/produtos/999").status_code == 404
 
 
+def test_campos_extras_na_ficha_e_no_catalogo(client):
+    """consumo_diario/substituicoes: conteúdo extra da curadoria (uso no 'Detalhes'
+    do app) — ecoam na ficha e no catálogo, e ficam null quando não cadastrados."""
+    com_extras = _criar(
+        client,
+        {
+            **LEITE_INTEGRAL,
+            "consumo_diario": "1 copo por dia",
+            "substituicoes": "Prefirir bebidas vegetais fortificadas.",
+        },
+    )
+    ficha = client.get(f"/produtos/{com_extras['id']}").json()
+    assert ficha["consumo_diario"] == "1 copo por dia"
+    assert ficha["substituicoes"] == "Prefirir bebidas vegetais fortificadas."
+
+    (item,) = client.get("/produtos/catalogo").json()["produtos"]
+    assert item["consumo_diario"] == "1 copo por dia"
+    assert item["substituicoes"] == "Prefirir bebidas vegetais fortificadas."
+
+    # sem os campos no cadastro → null (o app esconde a seção)
+    padrao = _criar(client, LEITE_DESNATADO)
+    assert client.get(f"/produtos/{padrao['id']}").json()["consumo_diario"] is None
+
+
 def test_busca_forte(client):
     criado = _criar(client, LEITE_INTEGRAL)
     r = client.get(
@@ -267,6 +291,32 @@ def test_api_key_exige_header_quando_configurada(client, monkeypatch):
 
     # /health continua aberto (monitoramento)
     assert client.get("/health").status_code == 200
+
+
+def test_toda_rota_de_app_exige_chave_menos_a_imagem(client, imagens_dir, monkeypatch):
+    """Rede de segurança do auth por rota: se alguém criar rota nova sem
+    Depends(exigir_api_key), este teste acusa. Única exceção de chave:
+    GET /{id}/imagem — a <Image> do RN não manda header (e foto de embalagem
+    não é dado sensível); o upload continua exigindo as duas chaves."""
+    criado = _criar(client, LEITE_INTEGRAL)
+    r_up = client.post(
+        f"/produtos/{criado['id']}/imagem",
+        files={"arquivo": ("face.png", PNG_FAKE, "image/png")},
+    )
+    assert r_up.status_code == 201, r_up.text
+
+    monkeypatch.setattr(settings, "API_KEY", CHAVE_APP)
+
+    # TODAS as leituras do app exigem a chave quando configurada…
+    assert client.get("/produtos").status_code == 401
+    assert client.get(f"/produtos/{criado['id']}").status_code == 401
+    assert client.get("/produtos/catalogo").status_code == 401
+    assert client.get("/produtos/busca", params={"q": "x"}).status_code == 401
+
+    # …menos o download da foto: 200 sem header nenhum
+    dl = client.get(f"/produtos/{criado['id']}/imagem")
+    assert dl.status_code == 200
+    assert dl.content == PNG_FAKE
 
 
 def test_api_key_sem_config_fica_aberta(client):

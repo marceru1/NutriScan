@@ -1,13 +1,13 @@
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
-import { USE_MOCK, urlImagem } from '../services/api';
+import { urlImagem } from '../services/api';
 import { textoAlerta } from '../domain/rdc';
 import { colors, radius } from '../theme';
-import type { ProdutoCompleto } from '../types';
+import type { ProdutoLista } from '../types';
 import { Avancar } from './Icons';
 
-export function ProdutoRow({ produto, onPress }: { produto: ProdutoCompleto; onPress: () => void }) {
+export function ProdutoRow({ produto, onPress }: { produto: ProdutoLista; onPress: () => void }) {
   const alerta = textoAlerta(produto.classificacao_rdc);
-  const temFoto = !USE_MOCK && !!produto.imagem_path;
+  const temFoto = !!produto.imagem_path;
   return (
     <Pressable
       onPress={onPress}

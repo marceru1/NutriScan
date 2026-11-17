@@ -19,17 +19,15 @@ from ..schemas import (
 )
 from ..seguranca import exigir_admin, exigir_api_key
 
-# exigir_api_key no router INTEIRO: é a porta de entrada do app RN.
+# A chave X-Api-Key é por rota (e não no router inteiro) por UM motivo:
+# GET /{id}/imagem é público — a <Image> do RN não manda header, e a foto é
+# embalagem registrada (não é dado sensível); a proteção real é o rate limit.
 # Escritas somam exigir_admin (a equipe precisa das duas).
-router = APIRouter(
-    prefix="/produtos",
-    tags=["produtos"],
-    dependencies=[Depends(exigir_api_key)],
-)
+router = APIRouter(prefix="/produtos", tags=["produtos"])
 
 
 @router.post("", response_model=ProdutoCompleto, status_code=201,
-             dependencies=[Depends(exigir_admin)])
+             dependencies=[Depends(exigir_api_key), Depends(exigir_admin)])
 def criar_produto(dados: ProdutoCreate, db: Session = Depends(get_db)):
     """Cadastra um produto do banco regional (+ aliases) — uso da equipe (admin)."""
     produto = crud.criar_produto(db, dados)
@@ -37,7 +35,7 @@ def criar_produto(dados: ProdutoCreate, db: Session = Depends(get_db)):
 
 
 # /busca e /catalogo ANTES de /{produto_id} — ordem importa para não casar como id
-@router.get("/busca", response_model=BuscaOut)
+@router.get("/busca", response_model=BuscaOut, dependencies=[Depends(exigir_api_key)])
 def buscar_produto(q: str, db: Session = Depends(get_db)):
     """Identifica o produto a partir do texto lido na face da embalagem.
 
@@ -69,7 +67,7 @@ def buscar_produto(q: str, db: Session = Depends(get_db)):
     return BuscaOut(match=match, score=score, candidatos=produtos)
 
 
-@router.get("/catalogo", response_model=CatalogoOut)
+@router.get("/catalogo", response_model=CatalogoOut, dependencies=[Depends(exigir_api_key)])
 def catalogo(db: Session = Depends(get_db)):
     """Catálogo completo (texto) para o app pré-baixar e bater match offline.
 
@@ -90,6 +88,8 @@ def catalogo(db: Session = Depends(get_db)):
                 traducao_n1=p.traducao_n1,
                 traducao_n2=p.traducao_n2,
                 traducao_n3=p.traducao_n3,
+                consumo_diario=p.consumo_diario,
+                substituicoes=p.substituicoes,
                 tem_imagem=bool(p.imagem_path),
             )
             for p in produtos
@@ -97,12 +97,13 @@ def catalogo(db: Session = Depends(get_db)):
     )
 
 
-@router.get("", response_model=list[ProdutoResumo])
+@router.get("", response_model=list[ProdutoResumo], dependencies=[Depends(exigir_api_key)])
 def listar(limite: int = 50, db: Session = Depends(get_db)):
     return [ProdutoResumo.model_validate(p) for p in crud.listar_produtos(db, limite)]
 
 
-@router.get("/{produto_id}", response_model=ProdutoCompleto)
+@router.get("/{produto_id}", response_model=ProdutoCompleto,
+            dependencies=[Depends(exigir_api_key)])
 def obter(produto_id: int, db: Session = Depends(get_db)):
     produto = crud.get_produto(db, produto_id)
     if produto is None:
@@ -112,7 +113,9 @@ def obter(produto_id: int, db: Session = Depends(get_db)):
 
 @router.get("/{produto_id}/imagem")
 def obter_imagem(produto_id: int, db: Session = Depends(get_db)):
-    """Foto da face principal cadastrada — usada como confirmação no app."""
+    """Foto da face cadastrada — confirmação visual. Rota PÚBLICA de propósito:
+    a <Image> do RN não manda header; foto de embalagem não é dado sensível,
+    a proteção é o rate limit (e sobe/sobe: o upload, sim, precisa das 2 chaves)."""
     produto = crud.get_produto(db, produto_id)
     if produto is None or not produto.imagem_path:
         raise HTTPException(404, "Produto não encontrado ou sem imagem cadastrada")
@@ -126,7 +129,7 @@ def obter_imagem(produto_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/{produto_id}/imagem", status_code=201,
-             dependencies=[Depends(exigir_admin)])
+             dependencies=[Depends(exigir_api_key), Depends(exigir_admin)])
 async def enviar_imagem(
     produto_id: int, arquivo: UploadFile, db: Session = Depends(get_db)
 ):
@@ -187,7 +190,7 @@ async def enviar_imagem(
 
 
 @router.delete("/{produto_id}", status_code=204,
-               dependencies=[Depends(exigir_admin)])
+               dependencies=[Depends(exigir_api_key), Depends(exigir_admin)])
 def apagar(produto_id: int, db: Session = Depends(get_db)):
     produto = crud.get_produto(db, produto_id)
     if produto is None:

@@ -1,14 +1,15 @@
 // Config da conexão com o backend (FastAPI) — é o ÚNICO lugar para mexer.
-// Emulador Android: 10.0.2.2 (= o PC hospedeiro). Celular físico: IP do PC na rede
-// (uvicorn --host 0.0.0.0). Nesta máquina de dev a porta 8000 está ocupada:
-// use a porta que o uvicorn do backend rodar (ex.: 8765).
-export const API_URL = 'http://10.0.2.2:8000';
+// Produção: backend no VPS (Dokploy, https + Cloudflare).
+export const API_URL = 'https://api.beeorganized.com.br';
 
-// Mesma string de NUTRISCAN_API_KEY do backend (backend/.env). Deixe vazio em dev
-// aberto (backend sem chave) — e o header não é enviado. A chave vai no APK:
-// é porta de entrada, não cofre (ver README do backend).
-export const API_KEY = '';
+// Dev no PC + celular físico no hotspot do PC: http://<IP-do-PC>:<porta-do-uvicorn>
+// (uvicorn --host 0.0.0.0). Emulador Android: http://10.0.2.2:<porta> = o PC hospedeiro.
+// Dev aberto sem chave: deixe API_KEY = '' (o header não é enviado).
 
-// false = usa os dados de demonstração (mock, sem rede). true = chama o FastAPI.
-// Em build de produção deixe SEMPRE true.
+// Mesma string de NUTRISCAN_API_KEY do backend (agora é '123').
+// Só as rotas /produtos usam; o GET de imagem é público. O admin token NUNCA vai aqui.
+export const API_KEY = '123';
+
+// false = chama o FastAPI real. true = dados de demonstração (mock, sem rede).
+// Quem decide é o services/api.ts (if (USE_MOCK) → mock).
 export const USE_MOCK = false;

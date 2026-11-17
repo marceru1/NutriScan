@@ -1,5 +1,5 @@
 // DADOS DE DEMONSTRAÇÃO para desenvolver a interface sem o backend.
-// Valores do protótipo. Troque USE_MOCK em services/api.ts quando o backend estiver acessível.
+// Valores do protótipo. Troque USE_MOCK em services/config.ts quando o backend estiver acessível.
 import type { ProdutoCompleto } from '../types';
 
 const creme = (id: number): ProdutoCompleto => ({

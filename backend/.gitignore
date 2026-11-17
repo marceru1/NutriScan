@@ -5,6 +5,10 @@ __pycache__/
 pytest-of-*/
 data/*.db
 data/*.db-*
+# Fotos das faces enviadas por upload — conteúdo, não código
+data/imagens/
+# Segredos — a equipe copia de .env.example
+.env
 
 # Arquivos/diretórios temporários do pip e do sistema
 *.tmp

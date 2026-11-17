@@ -186,7 +186,7 @@ NutriScan/
 │   ├── android/ · ios/
 │   └── (backend FastAPI não entra aqui — é o backend/)
 ├── backend/         # FastAPI + SQLite + FTS5 (Onda 2) — ver backend/README.md
-├── docs/            # PEX-MDL-54 e Lean Inception (documentos de origem da equipe)
+├── docs/            # PEX-MDL-54 e Lean Inception (origem da equipe) + Contrato da API
 └── README.md        # Visão geral do monorepo (este arquivo)
 ```
 

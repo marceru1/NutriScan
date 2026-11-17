@@ -43,3 +43,28 @@ class BuscaOut(BaseModel):
     score: float
     # forte: 1 produto ; duvidoso: candidatos para o usuário confirmar ; nenhum: []
     candidatos: list[ProdutoResumo]
+
+
+class CatalogoProduto(BaseModel):
+    """Item do catálogo que o app pré-baixa para matching offline.
+
+    Só texto (pequeno, MB para centenas de produtos) — a foto da face
+    entra por rede depois, como confirmação, via GET /produtos/{id}/imagem.
+    """
+
+    id: int
+    nome: str
+    marca: str
+    aliases: list[str] = []
+    classificacao_rdc: dict[str, Any]
+    traducao_n1: str
+    traducao_n2: str
+    traducao_n3: str
+    # App só tenta baixar a foto se existe — evita 404 por produto
+    tem_imagem: bool
+
+
+class CatalogoOut(BaseModel):
+    gerado_em: str  # ISO — o app pode comparar contra seu cache
+    total: int
+    produtos: list[CatalogoProduto]

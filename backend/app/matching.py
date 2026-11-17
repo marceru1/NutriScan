@@ -12,6 +12,7 @@ Regras acordadas no projeto (ver docs e README do backend):
 import re
 import unicodedata
 from dataclasses import dataclass
+from typing import Literal
 
 from sqlalchemy import text
 from sqlalchemy.orm import Session
@@ -77,7 +78,7 @@ def buscar(session: Session, texto_ocr: str) -> list[Candidato]:
     return candidatos[: settings.MAX_CANDIDATOS]
 
 
-def classificar(candidatos: list[Candidato]) -> tuple[str, float]:
+def classificar(candidatos: list[Candidato]) -> tuple[Literal["forte", "duvidoso", "nenhum"], float]:
     """('forte' | 'duvidoso' | 'nenhum', score do melhor).
 
     Forte exige: score >= STRONG_MIN **e** o 1º se destacar do 2º (DIFF_MIN).

@@ -4,7 +4,7 @@ Uso:  python -m app.seed   (dentro de backend/, com o venv ativado)
 Idempotente: não roda se já existirem produtos cadastrados.
 """
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from .crud import criar_produto
 from .db import init_db, session_scope
@@ -93,7 +93,7 @@ PRODUTOS_EXEMPLO = [
 def main() -> None:
     init_db()
     with session_scope() as db:
-        total = len(db.scalars(select(Produto)).all())
+        total = db.scalar(select(func.count(Produto.id))) or 0
         if total > 0:
             print(f"Banco já tem {total} produto(s) — seed ignorado.")
             return

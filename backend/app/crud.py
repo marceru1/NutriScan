@@ -1,5 +1,7 @@
 """Operações de cadastro sobre o banco de produtos."""
 
+from pathlib import Path
+
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
@@ -52,6 +54,19 @@ def get_produto(session: Session, produto_id: int) -> Produto | None:
 
 def listar_produtos(session: Session, limite: int = 50) -> list[Produto]:
     return session.query(Produto).order_by(Produto.id).limit(limite).all()
+
+
+def listar_catalogo(session: Session) -> list[Produto]:
+    """Catálogo completo para o app pré-sincronizar (texto é pequeno — MB)."""
+    return session.query(Produto).order_by(Produto.id).all()
+
+
+def definir_imagem(session: Session, produto: Produto, caminho: Path) -> Path:
+    """Grava a foto da face cadastrada. Retorna o caminho gravado (absoluto)."""
+    produto.imagem_path = str(caminho.resolve())
+    session.commit()
+    session.refresh(produto)
+    return caminho
 
 
 def apagar_produto(session: Session, produto: Produto) -> None:

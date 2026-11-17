@@ -31,6 +31,8 @@ class Produto(Base):
         back_populates="produto",
         cascade="all, delete-orphan",
         lazy="joined",
+        # Ordem determinística (ordem de cadastro) — o SQLite não garante a do join
+        order_by="ProdutoAlias.id",
     )
 
 

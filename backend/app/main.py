@@ -5,7 +5,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from . import settings
+from . import rate_limit, settings
 from .db import init_db
 from .routers import produtos
 
@@ -34,7 +34,17 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.middleware("http")(rate_limit.limitar)
+
 app.include_router(produtos.router)
+
+
+@app.middleware("http")
+async def cabecalho_nosniff(request, call_next):
+    """Serve de imagem entrega bytes enviados por terceiro — barra o sniff."""
+    response = await call_next(request)
+    response.headers.setdefault("X-Content-Type-Options", "nosniff")
+    return response
 
 
 @app.get("/health", tags=["infra"])

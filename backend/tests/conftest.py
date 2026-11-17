@@ -6,8 +6,17 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
+from app import rate_limit
 from app.db import get_db, init_db
 from app.main import app
+
+
+@pytest.fixture(autouse=True)
+def zerar_rate_limit():
+    """Isola os contadores do rate limit (estado global) entre testes."""
+    rate_limit.reset()
+    yield
+    rate_limit.reset()
 
 
 def _engine_memoria():

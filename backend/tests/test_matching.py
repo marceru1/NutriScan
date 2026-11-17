@@ -54,6 +54,23 @@ def test_busca_com_gap_forte_vs_irmao(mem_db):
     assert candidatos[0].produto_id == integral.id
 
 
+def test_busca_por_alias_que_nao_esta_no_nome(mem_db):
+    """O OCR lê o texto da embalagem, não o cadastrado: alias precisa estar no FTS.
+
+    Regressão: no criar_produto o objeto é novo e o relacionamento aliases
+    carregava vazio na hora de indexar — o índice ficava só com nome+marca.
+    """
+    produto = _criar(
+        mem_db,
+        "Macarrão Instantâneo Turma da Mônica",
+        "Nissin",
+        ["fonte de vitaminas", "sabor tomate suave"],
+    )
+    candidatos = buscar(mem_db, "FONTE DE VITAMINAS SABOR")
+    assert candidatos and candidatos[0].produto_id == produto.id
+    assert classificar(candidatos) == ("forte", 1.0)
+
+
 def test_busca_generico_traz_os_2_irmaos(mem_db):
     """Sem 'INTEGRAL'/'DESNATADO' no OCR: os dois empatam → nunca assumir."""
     _criar(mem_db, "Leite Integral Fazendinha", "Fazendinha", ["leite paste fazendinha"])

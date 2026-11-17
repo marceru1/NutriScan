@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from sqlalchemy import text
+from sqlalchemy import select, text
 from sqlalchemy.orm import Session
 
 from . import matching
@@ -12,8 +12,16 @@ from .schemas import ProdutoCreate
 
 def indexar_produto(session: Session, produto: Produto) -> None:
     """Reescreve a linha do produto no índice FTS5 (idempotente)."""
+    # flush + SELECT explícito dos textos: em criar_produto o objeto é novo e
+    # o relacionamento aliases carrega VAZIO (lazy="joined" só age em objetos
+    # consultados; com autoflush=False os pendentes não entram) — o índice
+    # ficava só com nome+marca e o matching por alias nunca disparava.
+    session.flush()
+    textos = session.scalars(
+        select(ProdutoAlias.texto).where(ProdutoAlias.produto_id == produto.id)
+    ).all()
     texto = matching.texto_indexado(
-        produto.nome, produto.marca, [a.texto for a in produto.aliases]
+        produto.nome, produto.marca, [t for t in textos if t]
     )
     session.execute(text("DELETE FROM produto_fts WHERE rowid = :i"), {"i": produto.id})
     session.execute(

@@ -56,7 +56,7 @@ A região Norte é historicamente rica em biodiversidade alimentar, mas a ociden
 
 ## 3. Persona principal
 
-**Dona Maria / Consumidor Consciente de Manaus** — moradora que faz compras para a família, sem formação em nutrição, com rotina corrida. Acha os rótulos minúsculos e ilenpm rgíveis; preocupada com pressão alta e diabetes na família, precisa de **resposta rápida apontando a câmera para a frente da embalagem**. Usa Android/iOS diariamente e espera apps intuitivos, sem formulários longos.
+**Dona Maria / Consumidor Consciente de Manaus** — moradora que faz compras para a família, sem formação em nutrição, com rotina corrida. Acha os rótulos minúsculos e ilegíveis; preocupada com pressão alta e diabetes na família, precisa de **resposta rápida apontando a câmera para a frente da embalagem**. Usa Android/iOS diariamente e espera apps intuitivos, sem formulários longos.
 
 ---
 
@@ -91,7 +91,7 @@ A região Norte é historicamente rica em biodiversidade alimentar, mas a ociden
 | Backend (Onda 2) | Python + FastAPI + SQLite (FTS5 para busca por texto) | — |
 
 ### Por que OCR nativo?
-cls
+
 O coração do NutriScan é **ler a face principal da embalagem** — a que fica exposta na gôndola, com nome, marca e os selos da rotulagem frontal da RDC 429/2020 — e não o código de barras nem a tabela nutricional do verso. É exatamente nessa face que a ANVISA exige as **lupas de atenção** (alto em açúcar adicionado, sódio e gordura saturada) — tipografia grande, alto contraste e padrão fixo: cenário ideal para OCR. O `react-native-vision-camera-ocr-plus` roda o **Google ML Kit Text Recognition 100% no dispositivo** (sem internet, sem custo por consulta) e expõe:
 
 - `<Camera mode="recognize">` — OCR ao vivo em cada frame (usado agora na tela inicial);

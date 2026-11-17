@@ -1,273 +1,106 @@
 /**
- * NutriScan — Scanner de Rótulos (MVP — Onda 1, F01)
- *
- * Tela inicial do app: lê a face principal do produto (a que fica em
- * exposição na gôndola) e mostra o texto reconhecido por OCR
- * (react-native-vision-camera-ocr-plus).
- *
- * Próximos passos (Lean Inception):
- *  - F04: alertas visuais de açúcar/sódio/gordura saturada (RDC 429/2020 ANVISA)
- *  - F03: tradução da tabela nutricional em 3 níveis de profundidade
- *
- * Biblioteca: https://github.com/jamenamcinteer/react-native-vision-camera-ocr-plus
+ * NutriScan — raiz do app.
+ * Navegação própria e mínima (pilha + 2 abas), sem libs nativas extras.
+ * Se a equipe preferir React Navigation, cada tela em src/screens já é independente.
  */
-
-import { useCallback, useEffect, useRef, useState } from 'react';
-import {
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-  useColorScheme,
-  type StyleProp,
-  type ViewStyle,
-} from 'react-native';
-import { useCameraDevice, useCameraPermission } from 'react-native-vision-camera';
-import {
-  Camera as OcrPlusCamera,
-  type CameraTypes,
-  type ScanRegion,
-  type Text as OcrText,
-} from 'react-native-vision-camera-ocr-plus';
-
-// Área central da tela em que o OCR de fato roda — a face principal do
-// produto (mesma proporção do overlay).
-const SCAN_REGION: ScanRegion = {
-  left: '10%',
-  top: '25%',
-  width: '80%',
-  height: '40%',
-};
-
-const MIN_UPDATE_INTERVAL_MS = 500;
-
-// O ocr-plus tipa o <Camera> contra os CameraProps do hook useCamera
-// (que não incluem style); em runtime todos os props são repassados ao
-// <Camera> do VisionCamera v5, que aceita style. Centralizamos o bridge aqui.
-type OcrCameraProps = CameraTypes & { style?: StyleProp<ViewStyle> };
-const OcrCamera = OcrPlusCamera as React.FC<OcrCameraProps>;
+import { useCallback, useEffect, useState } from 'react';
+import { BackHandler, StatusBar, StyleSheet, View } from 'react-native';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
+import { Header } from './src/components/Header';
+import { TabBar, type Aba } from './src/components/TabBar';
+import { Home } from './src/screens/Home';
+import { Lista } from './src/screens/Lista';
+import { Resumo } from './src/screens/Resumo';
+import { Scanner } from './src/screens/Scanner';
+import { Splash } from './src/screens/Splash';
+import { colors } from './src/theme';
+import type { ProdutoCompleto, Rota } from './src/types';
 
 export default function App() {
-  const device = useCameraDevice('back');
-  const { hasPermission, requestPermission } = useCameraPermission();
-  const isDarkMode = useColorScheme() === 'dark';
-
-  const [recognizedText, setRecognizedText] = useState('');
-  const lastUpdate = useRef(0);
+  const [splash, setSplash] = useState(true);
+  const [pilha, setPilha] = useState<Rota[]>([{ nome: 'home' }]);
+  const [historico, setHistorico] = useState<string[]>([]);
 
   useEffect(() => {
-    if (!hasPermission) {
-      requestPermission();
-    }
-  }, [hasPermission, requestPermission]);
-
-  // OCR dispara a cada frame processado; limita a frequência de renderização.
-  const handleOcr = useCallback((data: string | OcrText) => {
-    if (typeof data === 'string' || !data?.resultText) {
-      return;
-    }
-    const now = Date.now();
-    if (now - lastUpdate.current < MIN_UPDATE_INTERVAL_MS) {
-      return;
-    }
-    lastUpdate.current = now;
-    setRecognizedText(data.resultText.trim());
+    const t = setTimeout(() => setSplash(false), 1500);
+    return () => clearTimeout(t);
   }, []);
 
-  const clearText = useCallback(() => setRecognizedText(''), []);
+  const rota = pilha[pilha.length - 1];
+  const aba: Aba = pilha[0].nome === 'scanner' ? 'escanear' : 'explorar';
 
-  const palette = isDarkMode ? darkColors : lightColors;
+  const ir = useCallback((r: Rota) => setPilha(p => [...p, r]), []);
+  const voltar = useCallback(() => setPilha(p => (p.length > 1 ? p.slice(0, -1) : p)), []);
+  const trocarAba = useCallback(
+    (a: Aba) => setPilha([{ nome: a === 'escanear' ? 'scanner' : 'home' }]),
+    [],
+  );
 
-  if (!hasPermission) {
-    return (
-      <View style={[styles.container, styles.centered, styles.withSafeTop]}>
-        <Text style={[styles.emoji, { color: palette.text }]}>📷</Text>
-        <Text style={[styles.title, { color: palette.text }]}>
-          NutriScan precisa da câmera
-        </Text>
-        <Text style={[styles.hint, { color: palette.subtle }]}>
-          Usamos a câmera apenas para ler a frente da embalagem e traduzir a
-          informação nutricional.
-        </Text>
-        <Pressable style={styles.button} onPress={requestPermission}>
-          <Text style={styles.buttonText}>Permitir câmera</Text>
-        </Pressable>
-      </View>
-    );
+  // Botão "voltar" do Android: desempilha; na raiz deixa o sistema sair do app.
+  useEffect(() => {
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (pilha.length > 1) {
+        voltar();
+        return true;
+      }
+      return false;
+    });
+    return () => sub.remove();
+  }, [pilha.length, voltar]);
+
+  const buscar = useCallback(
+    (q: string) => {
+      setHistorico(h => [q, ...h.filter(x => x !== q)].slice(0, 5));
+      setPilha(p => (p[p.length - 1].nome === 'lista' ? [...p.slice(0, -1), { nome: 'lista', consulta: q }] : [...p, { nome: 'lista', consulta: q }]));
+    },
+    [],
+  );
+  const abrir = useCallback((produto: ProdutoCompleto) => ir({ nome: 'resumo', produto }), [ir]);
+
+  if (splash) {
+    return <Splash />;
   }
 
-  if (device == null) {
-    return (
-      <View style={[styles.container, styles.centered, styles.withSafeTop]}>
-        <Text style={[styles.title, { color: palette.text }]}>
-          Nenhuma câmera encontrada
-        </Text>
-        <Text style={[styles.hint, { color: palette.subtle }]}>
-          O scanner precisa de um celular (ou emulador com câmera virtual).
-        </Text>
-      </View>
-    );
-  }
+  const escuro = rota.nome === 'scanner';
+  const titulo =
+    rota.nome === 'lista'
+      ? 'Produtos populares na região'
+      : rota.nome === 'scanner'
+      ? 'Escanear produto'
+      : rota.nome === 'resumo'
+      ? `Resumo - ${rota.produto.nome}`
+      : '';
 
   return (
-    <View style={styles.container}>
-      <OcrCamera
-        style={StyleSheet.absoluteFill}
-        device={device}
-        isActive
-        mode="recognize"
-        options={{
-          language: 'latin',
-          frameSkipThreshold: 10,
-          scanRegion: SCAN_REGION,
-          useLightweightMode: true,
-        }}
-        callback={handleOcr}
-      />
-
-      {/* Guia visual: alinhado com a scanRegion do OCR */}
-      <View
-        pointerEvents="none"
-        style={{
-          ...styles.scanGuide,
-          left: SCAN_REGION.left,
-          top: SCAN_REGION.top,
-          width: SCAN_REGION.width,
-          height: SCAN_REGION.height,
-          borderColor: palette.accent,
-        }}
-      />
-
-      <View style={styles.topBadge}>
-        <Text style={styles.topBadgeText}>NutriScan — aponte para a frente da embalagem</Text>
-      </View>
-
-      {recognizedText.length > 0 && (
-        <View style={[styles.resultCard, { backgroundColor: palette.card }]}>
-          <Text style={[styles.resultTitle, { color: palette.text }]}>
-            Texto reconhecido
-          </Text>
-          <Text
-            style={[styles.resultText, { color: palette.subtle }]}
-            numberOfLines={6}>
-            {recognizedText}
-          </Text>
-          <View style={styles.resultActions}>
-            <Pressable style={styles.smallButton} onPress={clearText}>
-              <Text style={styles.smallButtonText}>Limpar</Text>
-            </Pressable>
-          </View>
+    <SafeAreaProvider>
+      <StatusBar barStyle={escuro ? 'light-content' : 'dark-content'} backgroundColor={escuro ? colors.black : colors.bg} />
+      <SafeAreaView style={[s.raiz, escuro && { backgroundColor: colors.black }]} edges={['top']}>
+        {rota.nome !== 'home' && (
+          <Header titulo={titulo} escuro={escuro} onVoltar={pilha.length > 1 ? voltar : undefined} />
+        )}
+        <View style={s.corpo}>
+          {rota.nome === 'home' && (
+            <Home
+              historico={historico}
+              onBuscar={buscar}
+              onEscanear={() => trocarAba('escanear')}
+              onAbrir={abrir}
+              onVerMais={() => ir({ nome: 'lista' })}
+            />
+          )}
+          {rota.nome === 'lista' && (
+            <Lista key={rota.consulta ?? ''} consultaInicial={rota.consulta} historico={historico} onBuscar={buscar} onAbrir={abrir} />
+          )}
+          {rota.nome === 'scanner' && <Scanner ativa onProduto={abrir} />}
+          {rota.nome === 'resumo' && <Resumo produto={rota.produto} />}
         </View>
-      )}
-    </View>
+        <TabBar ativa={aba} onSelecionar={trocarAba} />
+      </SafeAreaView>
+    </SafeAreaProvider>
   );
 }
 
-const lightColors = {
-  text: '#1c1c1e',
-  subtle: '#55555a',
-  card: '#ffffffee',
-  accent: '#2f9e44',
-};
-
-const darkColors = {
-  text: '#f2f2f7',
-  subtle: '#b9b9c0',
-  card: '#1c1c1eee',
-  accent: '#69db7c',
-};
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#000',
-  },
-  centered: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 24,
-  },
-  withSafeTop: {
-    marginTop: 48,
-  },
-  emoji: {
-    fontSize: 48,
-    marginBottom: 12,
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: '700',
-    textAlign: 'center',
-    marginBottom: 8,
-  },
-  hint: {
-    fontSize: 15,
-    lineHeight: 22,
-    textAlign: 'center',
-    marginBottom: 20,
-  },
-  button: {
-    backgroundColor: '#2f9e44',
-    borderRadius: 12,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-  },
-  buttonText: {
-    color: '#fff',
-    fontWeight: '700',
-    fontSize: 16,
-  },
-  topBadge: {
-    position: 'absolute',
-    top: 12,
-    alignSelf: 'center',
-    backgroundColor: '#00000099',
-    borderRadius: 999,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-  },
-  topBadgeText: {
-    color: '#fff',
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  scanGuide: {
-    position: 'absolute',
-    borderRadius: 16,
-    borderWidth: 2,
-  },
-  resultCard: {
-    position: 'absolute',
-    left: 16,
-    right: 16,
-    bottom: 24,
-    borderRadius: 16,
-    padding: 16,
-    gap: 8,
-  },
-  resultTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  resultText: {
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  resultActions: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-  },
-  smallButton: {
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#888',
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-  },
-  smallButtonText: {
-    fontSize: 13,
-    fontWeight: '600',
-  },
+const s = StyleSheet.create({
+  raiz: { flex: 1, backgroundColor: colors.bg },
+  corpo: { flex: 1 },
 });

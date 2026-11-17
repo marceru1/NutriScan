@@ -11,10 +11,13 @@
   },
   "dependencies": {
     "@react-native/new-app-screen": "0.88.1",
+    "lucide-react-native": "^1.73.0",
     "react": "19.3.0",
     "react-native": "0.88.1",
+    "react-native-nitro-image": "^0.15.2",
     "react-native-nitro-modules": "^0.37.2",
     "react-native-safe-area-context": "^5.5.2",
+    "react-native-svg": "^15.16.1",
     "react-native-vision-camera": "^5.2.4",
     "react-native-vision-camera-ocr-plus": "^2.1.2",
     "react-native-vision-camera-worklets": "^5.2.4",

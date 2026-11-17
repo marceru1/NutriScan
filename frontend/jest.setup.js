@@ -22,3 +22,7 @@ jest.mock('react-native-vision-camera-ocr-plus', () => ({
   PhotoRecognizer: jest.fn(async () => ({ resultText: '', blocks: [] })),
   RemoveLanguageModel: jest.fn(async () => true),
 }));
+
+jest.mock('react-native-safe-area-context', () =>
+  require('react-native-safe-area-context/jest/mock').default,
+);
